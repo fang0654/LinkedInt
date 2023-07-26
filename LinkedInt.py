@@ -75,7 +75,7 @@ else:
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 
-def create_graphql(start=0, count=50, companyId=None, title=None):
+def create_graphql(start=0, count=50, companyId=None, title=None, search_cluster=None):
     query_string = (
         f"(start:{start},count:{count},origin:COMPANY_PAGE_CANNED_SEARCH,query:"
     )
@@ -92,7 +92,7 @@ def create_graphql(start=0, count=50, companyId=None, title=None):
 
     query_string += ",".join(params)
 
-    query_string += "),includeFiltersInResponse:false))&queryId=voyagerSearchDashClusters.9bce173fbce5f0cf146dac911d840d9"
+    query_string += "),includeFiltersInResponse:false))&queryId=" + search_cluster
 
     return query_string
 
@@ -250,10 +250,35 @@ def get_search():
 
         print("[*] Using company ID: %s" % companyID)
 
+    # Get the search clusters
+
     # Fetch the initial page to get results/page counts
+    r = requests.get(
+        "https://www.linkedin.com/",
+        # params=params,
+        cookies=cookies,
+        verify=False,
+        proxies=proxies,
+    )
+
+    script_url = r.text[: r.text.find('data-fastboot-src="/assets/vendor.js"')].split(
+        '"'
+    )[-2]
+
+    r = requests.get(script_url, cookies=cookies, verify=False, proxies=proxies)
+
+    search_cluster = r.text[: r.text.find('",name:"search-cluster-collection"')].split(
+        '"'
+    )[-3]
+
+    # pdb.set_trace()
 
     url = f"https://www.linkedin.com/voyager/api/graphql?variables=" + create_graphql(
-        start=0, count=10, companyId=companyID, title=search
+        start=0,
+        count=10,
+        companyId=companyID,
+        title=search,
+        search_cluster=search_cluster,
     )
 
     headers = {
@@ -311,7 +336,13 @@ def get_search():
         # Request results for each page using the start offset
         url = (
             f"https://www.linkedin.com/voyager/api/graphql?variables="
-            + create_graphql(start=p, count=50, companyId=companyID, title=search)
+            + create_graphql(
+                start=p,
+                count=50,
+                companyId=companyID,
+                title=search,
+                search_cluster=search_cluster,
+            )
         )
 
         # if bCompany == False:
