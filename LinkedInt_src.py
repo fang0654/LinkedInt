@@ -31,48 +31,10 @@ import importlib
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 
-""" Setup Argument Parameters """
-parser = argparse.ArgumentParser(description="Discovery LinkedIn")
-parser.add_argument("-u", "--keywords", help="Keywords to search")
-parser.add_argument("-o", "--output", help="Output file (do not include extentions)")
-parser.add_argument("-e", "--email", help="Domain used for email address")
-parser.add_argument(
-    "-c", "--company", help="Restrict to company filter", action="store_true"
-)
-parser.add_argument("-i", "--id", help="Company ID to use")
-parser.add_argument("-f", "--format", help='Email format. "auto" to search Hunter')
-parser.add_argument(
-    "--login",
-    help="Login for LinkedIn",
-)
-parser.add_argument(
-    "--password",
-    help="Password for LinkedIn",
-)
-parser.add_argument(
-    "--apikey",
-    help="API Key for HunterIO",
-)
-parser.add_argument(
-    "--li_at", help="Provide li_at cookie (session cookie) instead of login"
-)
-parser.add_argument("--proxy", help="Use proxy server")
-args = parser.parse_args()
-
-if not ((args.login and args.password) or (args.li_at)):
-    print(f"Error: Either login/password or li_at cookie are required.")
-    # pdb.set_trace()
-    sys.exit(1)
-
-api_key = args.apikey  # Hunter API key
-username = args.login  # enter username here
-password = args.password  # enter password here
-if args.proxy:
-    proxies = {"https": args.proxy, "http": args.proxy}
-else:
-    proxies = {}  # {'https':'127.0.0.1:8080'}
 # silence all url warnings
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+proxies = {}  # {'https':'127.0.0.1:8080'}
 
 
 def create_graphql(start=0, count=50, companyId=None, title=None, search_cluster=None):
@@ -109,6 +71,7 @@ def create_graphql(start=0, count=50, companyId=None, title=None, search_cluster
 
 
 def login():
+    global username, password, proxies
     s = requests.Session()
     headers = {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/114.0"
@@ -167,8 +130,9 @@ def loadPage(client, url, data=None):
     except:
         sys.exit(0)
 
-
 def get_search():
+    global bCompany, search, cookies, outfile, prefix, suffix, bAuto, bSpecific, api_key, proxies, companyID
+    companyID = None  # Initialize companyID
     body = ""
     csv = []
     css = """<style>
@@ -564,8 +528,48 @@ def authenticate():
         sys.exit("[!] Could not authenticate to linkedin. %s" % e)
     return cookies
 
+def main():
+    global api_key, username, password, search, outfile, bCompany, bAuto, bSpecific, prefix, suffix, cookies, proxies
+    
+    """ Setup Argument Parameters """
+    parser = argparse.ArgumentParser(description="Discovery LinkedIn")
+    parser.add_argument("-u", "--keywords", help="Keywords to search")
+    parser.add_argument("-o", "--output", help="Output file (do not include extentions)")
+    parser.add_argument("-e", "--email", help="Domain used for email address")
+    parser.add_argument(
+        "-c", "--company", help="Restrict to company filter", action="store_true"
+    )
+    parser.add_argument("-i", "--id", help="Company ID to use")
+    parser.add_argument("-f", "--format", help='Email format. "auto" to search Hunter')
+    parser.add_argument(
+        "--login",
+        help="Login for LinkedIn",
+    )
+    parser.add_argument(
+        "--password",
+        help="Password for LinkedIn",
+    )
+    parser.add_argument(
+        "--apikey",
+        help="API Key for HunterIO",
+    )
+    parser.add_argument(
+        "--li_at", help="Provide li_at cookie (session cookie) instead of login"
+    )
+    parser.add_argument("--proxy", help="Use proxy server")
+    args = parser.parse_args()
 
-if __name__ == "__main__":
+    if not ((args.login and args.password) or args.li_at):
+        print(f"Error: Either login/password or li_at cookie are required.")
+        sys.exit(1)
+
+    api_key = args.apikey  # Hunter API key
+    username = args.login  # enter username here
+    password = args.password  # enter password here
+    if args.proxy:
+        proxies = {"https": args.proxy, "http": args.proxy}
+    else:
+        proxies = {}  # {'https':'127.0.0.1:8080'}
     banner()
     # Prompt user for data variables
     search = (
@@ -746,3 +750,7 @@ if __name__ == "__main__":
     get_search()
 
     print("[+] Complete")
+
+
+if __name__ == "__main__":
+    main()
